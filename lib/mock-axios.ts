@@ -12,7 +12,9 @@ import { AnyFunction, AxiosMockQueueItem, AxiosMockType, HttpResponse, SpyFn } f
 /** a FIFO queue of pending request */
 const _pending_requests: AxiosMockQueueItem[] = [];
 
-const _newReq: (url: string, data?: any, config?: any) => SyncPromise = (url: string, data?: any, config?: any) => {
+const _newReq: (config?: any) => SyncPromise = (config: any = {}) => {
+  const url: string = config.url;
+  const data: any = config.data;
   const promise: SyncPromise = new SyncPromise();
   _pending_requests.push({
     config,
@@ -20,36 +22,47 @@ const _newReq: (url: string, data?: any, config?: any) => SyncPromise = (url: st
     promise,
     url,
   });
+
   return(promise);
+};
+
+const _helperReq = (url: string, data?: any, config?: any) => {
+  const conf = data && config ? config : {};
+  return _newReq({
+    ...conf,
+    data,
+    url,
+  });
 };
 
 const MockAxios: AxiosMockType = jest.fn(_newReq) as unknown as AxiosMockType;
 
 // mocking Axios methods
-MockAxios.get = jest.fn(_newReq);
-MockAxios.post = jest.fn(_newReq);
-MockAxios.put = jest.fn(_newReq);
-MockAxios.patch = jest.fn(_newReq);
-MockAxios.delete = jest.fn(_newReq);
+MockAxios.get = jest.fn(_helperReq);
+MockAxios.post = jest.fn(_helperReq);
+MockAxios.put = jest.fn(_helperReq);
+MockAxios.patch = jest.fn(_helperReq);
+MockAxios.delete = jest.fn(_helperReq);
+MockAxios.request = jest.fn(_newReq);
 MockAxios.all = jest.fn((values) => Promise.all(values));
-MockAxios.head = jest.fn(_newReq);
-MockAxios.options = jest.fn(_newReq);
+MockAxios.head = jest.fn(_helperReq);
+MockAxios.options = jest.fn(_helperReq);
 MockAxios.create = jest.fn(() => MockAxios);
 
 MockAxios.interceptors = {
   request: {
-    use: jest.fn()
+    use: jest.fn(),
   },
   response: {
-    use: jest.fn()
-  }
+    use: jest.fn(),
+  },
 };
 
 MockAxios.defaults = {
   headers: {
-    common: []
-  }
-}
+    common: [],
+  },
+};
 
 MockAxios.popPromise = (promise?: SyncPromise) => {
 
@@ -119,9 +132,9 @@ MockAxios.mockResponse = (response?: HttpResponse, queueItem: SyncPromise|AxiosM
 
   const promise = popQueueItem(queueItem);
 
-  if(!promise && !silentMode) {
-    throw new Error('No request to respond to!')
-  } else if(!promise) {
+  if (!promise && !silentMode) {
+    throw new Error("No request to respond to!");
+  } else if (!promise) {
     return;
   }
 
@@ -132,9 +145,9 @@ MockAxios.mockResponse = (response?: HttpResponse, queueItem: SyncPromise|AxiosM
 MockAxios.mockError = (error: any= {}, queueItem: SyncPromise|AxiosMockQueueItem= null, silentMode: boolean = false) => {
   const promise = popQueueItem(queueItem);
 
-  if(!promise && !silentMode) {
-    throw new Error('No request to respond to!')
-  } else if(!promise) {
+  if (!promise && !silentMode) {
+    throw new Error("No request to respond to!");
+  } else if (!promise) {
     return;
   }
 
